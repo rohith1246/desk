@@ -102,11 +102,55 @@ GROQ_API_KEY=your_groq_api_key
 PORT=5050
 ```
 
-### 4. Run the Platform
+### 4. Run the Platform Locally
 ```bash
 python app.py
 ```
 Open your browser at `http://localhost:5050`.
+
+---
+
+## 🌐 Deploying to Render & Custom Subdomain (`desk.vitoniya.com`)
+
+This repository is pre-configured for **Render** with `render.yaml`, `Procfile`, and `runtime.txt`.
+
+### Step 1: Create Web Service on Render
+1. Log into [Render.com](https://dashboard.render.com).
+2. Click **New +** &rarr; **Web Service**.
+3. Select **Build and deploy from a Git repository** and connect `https://github.com/rohith1246/desk`.
+4. Configure service settings:
+   * **Name:** `vitoniya-desk`
+   * **Language / Runtime:** `Python 3`
+   * **Region:** Any (e.g. `Oregon (US West)` or `Singapore`)
+   * **Branch:** `main`
+   * **Build Command:** `pip install -r requirements.txt`
+   * **Start Command:** `gunicorn --bind 0.0.0.0:$PORT --workers 2 --timeout 120 app:app`
+   * **Health Check Path:** `/health`
+
+### Step 2: Set Environment Variables on Render
+Under the **Environment** tab on your Render web service, add:
+* `DATABASE_URL`: Your PostgreSQL Neon connection string (e.g. `postgresql://neondb_owner:...@ep-broad-tree-a50nkols-pooler.us-east-2.aws.neon.tech/neondb?sslmode=require`)
+* `GEMINI_API_KEY`: Your Google Gemini API key
+* `GROQ_API_KEY`: Your Groq API key (optional fallback)
+* `PYTHON_VERSION`: `3.11.9`
+
+### Step 3: Attach Custom Subdomain (`desk.vitoniya.com`)
+1. In the Render Dashboard, go to your service &rarr; **Settings** &rarr; **Custom Domains**.
+2. Click **Add Custom Domain** and enter:
+   ```
+   desk.vitoniya.com
+   ```
+3. Render will provide a CNAME target:
+   ```
+   vitoniya-desk.onrender.com (or your specific service address)
+   ```
+4. In your DNS Provider (Cloudflare, GoDaddy, Hostinger, AWS Route 53, or Namecheap) managing `vitoniya.com`:
+   * **Type:** `CNAME`
+   * **Name / Host:** `desk`
+   * **Target / Value:** `<your-service-name>.onrender.com`
+   * **Proxy Status:** DNS Only (or Proxied if using Cloudflare)
+   * **TTL:** Auto (or 3600)
+5. Click **Verify** in Render. Render automatically provisions a free Let's Encrypt **SSL Certificate** (`https://desk.vitoniya.com`).
 
 ---
 
