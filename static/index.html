@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vitoniya Public Help Desk | Citizen Infrastructure &amp; District Command Grid</title>
+    <meta name="description" content="AI-Powered Citizen Grievance & District Infrastructure Command Desk by Vitoniya Global Technologies. Serving Telangana and Andhra Pradesh districts.">
+    <meta name="theme-color" content="#1A73E8">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <!-- Leaflet.js GIS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <!-- National Strip -->
+    <div class="top-national-strip"></div>
+
+    <!-- Top Utility Bar -->
+    <div class="top-utility-bar">
+        <span>🇮🇳 Digital Public Infrastructure (DPI) &bull; Telangana &amp; Andhra Pradesh Municipal Network</span>
+        <span>Platform: <strong>desk.vitoniya.com</strong> &bull; Powered by Google Gemini 2.5 Flash</span>
+    </div>
+
+    <!-- Navigation Bar -->
+    <header class="main-nav">
+        <div class="nav-container">
+            <div class="brand-block">
+                <div class="brand-emblem">V</div>
+                <div class="brand-info">
+                    <h1>
+                        VITONIYA <span class="sub-badge">PUBLIC HELP DESK</span>
+                    </h1>
+                    <p>AI-Powered District Infrastructure &amp; Grievance Command System</p>
+                </div>
+            </div>
+
+            <div class="nav-actions">
+                <!-- Jurisdiction Switcher Button -->
+                <button class="dropdown-select-btn" id="navJurPill" onclick="openModal('jurisdictionModal')" title="Switch District Jurisdiction">
+                    🏛️ Warangal, Telangana
+                </button>
+
+                <!-- Active RBAC Role Badge -->
+                <span class="role-badge collector" id="activeRolePill" onclick="openModal('roleModal')" style="cursor:pointer;" title="Click to Switch Demo Role">
+                    🛡️ Collector / Magistrate Desk
+                </span>
+
+                <!-- Switch Role / Login Button -->
+                <button class="btn-primary-blue" onclick="openModal('roleModal')">
+                    <span>Switch Role / Login &rarr;</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation Tabs Strip -->
+    <nav class="tabs-strip">
+        <div class="tabs-inner">
+            <button class="tab-link active" data-tab="tab-collector" onclick="switchTab('tab-collector')">
+                <span>🏛️ 1. District Collector Command Desk</span>
+            </button>
+            <button class="tab-link" data-tab="tab-citizen" onclick="switchTab('tab-citizen')">
+                <span>📸 2. Citizen Voice &amp; Camera Portal</span>
+            </button>
+            <button class="tab-link" data-tab="tab-engineer" onclick="switchTab('tab-engineer')">
+                <span>🛠️ 3. Field Engineer Desk</span>
+            </button>
+            <button class="tab-link" data-tab="tab-transparency" onclick="switchTab('tab-transparency')">
+                <span>📜 4. Public Proof Ledger (Before / After)</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Workspace Container -->
+    <main class="desk-container">
+
+        <!-- District Header Banner -->
+        <div class="district-banner">
+            <div class="district-title">
+                <h2 id="currentDistrictName">Warangal, Telangana</h2>
+                <p id="currentAdminBody">Warangal District Collectorate &amp; Greater Warangal Municipal Corporation (GWMC)</p>
+                <div style="font-size:0.75rem; color:#1A73E8; font-weight:700; margin-top:4px;" id="currentCollectorName">
+                    District Magistrate: Dr. P. Satyanarayana, IAS
+                </div>
+            </div>
+
+            <div>
+                <button class="dropdown-select-btn" onclick="openModal('jurisdictionModal')">
+                    <span>🔄 Switch Jurisdiction (AP / TG)</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- TAB 1: DISTRICT COLLECTOR COMMAND DESK (RBAC) -->
+        <!-- ============================================== -->
+        <section id="tab-collector" class="view-section active">
+            
+            <!-- Real-Time KPI Cards -->
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-label">Total Citizen Grievances <span>📋</span></div>
+                    <div class="kpi-num" id="kpiTotal">47</div>
+                </div>
+                <div class="kpi-card urgent">
+                    <div class="kpi-label">Awaiting Collector Review <span>⚠️</span></div>
+                    <div class="kpi-num" id="kpiPending">12</div>
+                </div>
+                <div class="kpi-card approved">
+                    <div class="kpi-label">Sanctioned Work Orders <span>✅</span></div>
+                    <div class="kpi-num" id="kpiApproved">26</div>
+                </div>
+                <div class="kpi-card resolved">
+                    <div class="kpi-label">Repaired &amp; Verified <span>🛠️</span></div>
+                    <div class="kpi-num" id="kpiResolved">9</div>
+                </div>
+                <div class="kpi-card budget">
+                    <div class="kpi-label">Total Sanctioned Funds <span>💰</span></div>
+                    <div class="kpi-num" id="kpiBudget" style="font-size:1.45rem;">₹42.50 L</div>
+                </div>
+            </div>
+
+            <!-- Collector Split: Photo Approval Stream vs District GIS Map -->
+            <div class="collector-split-layout">
+                
+                <!-- Left: Incoming Citizen Photos & Collector Approval Stream -->
+                <div class="content-card">
+                    <div class="content-card-header">
+                        <h3>
+                            <span>📸 Citizen Evidence Review Queue</span>
+                            <span class="sub-badge" style="background:#FEE2E2; color:#B91C1C;">Collector Review</span>
+                        </h3>
+                        <span style="font-size:0.75rem; color:#64748B;">Pre-screened with Google Gemini 2.5 Flash Vision</span>
+                    </div>
+
+                    <div class="report-feed" id="collectorReportQueue">
+                        <!-- Populated dynamically via script.js -->
+                    </div>
+                </div>
+
+                <!-- Right: District GIS Map -->
+                <div>
+                    <div class="content-card">
+                        <div class="content-card-header">
+                            <h3>🗺️ District GIS Hazard Map</h3>
+                            <span style="font-size:0.75rem; color:#10B981; font-weight:700;">● Live Geotagged Pins</span>
+                        </div>
+                        <div id="districtMap"></div>
+                        <div style="display:flex; justify-content:space-between; margin-top:12px; font-size:0.75rem; color:#64748B;">
+                            <span><span style="color:#EF4444;">●</span> Red: Pending</span>
+                            <span><span style="color:#1A73E8;">●</span> Blue: Sanctioned</span>
+                            <span><span style="color:#10B981;">●</span> Green: Fixed</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- ============================================== -->
+        <!-- TAB 2: CITIZEN VOICE & CAMERA PORTAL          -->
+        <!-- ============================================== -->
+        <section id="tab-citizen" class="view-section">
+            <div class="citizen-form-box">
+                <div class="content-card">
+                    <div class="content-card-header">
+                        <h3>🎙️ Report Infrastructure Hazard in Your Area</h3>
+                        <span class="sub-badge">Citizen Voice Portal</span>
+                    </div>
+
+                    <!-- Big Mic Recording Hero -->
+                    <div class="mic-hero-box" id="micHeroBox">
+                        <button type="button" class="big-mic-btn" id="micHeroBtn" onclick="toggleCitizenVoice()" aria-label="Record grievance">
+                            🎙️
+                        </button>
+                        <div style="font-weight:800; font-size:1.05rem; color:#0F172A;" id="micBoxStatus">Tap to Speak (Telugu / English)</div>
+                        <p style="font-size:0.8rem; color:#64748B; margin-top:4px;">Audio is transcribed and translated live into official administrative English</p>
+                    </div>
+
+                    <form id="citizenForm" onsubmit="handleCitizenSubmit(event)">
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                            <div class="form-group-custom">
+                                <label for="citizenLangSelect">Your Preferred Language</label>
+                                <select id="citizenLangSelect" class="form-control-custom">
+                                    <option value="te-IN">Telugu (తెలుగు)</option>
+                                    <option value="en-IN">English (India)</option>
+                                </select>
+                            </div>
+                            <div class="form-group-custom">
+                                <label for="citizenPincodeInput">Pincode</label>
+                                <input type="text" id="citizenPincodeInput" class="form-control-custom" placeholder="e.g. 506001" value="506001">
+                            </div>
+                        </div>
+
+                        <div class="form-group-custom">
+                            <label for="citizenLocationInput">Landmark / Street Location</label>
+                            <input type="text" id="citizenLocationInput" class="form-control-custom" placeholder="e.g. Nakkalagutta Main Road, Opp. Police Station" value="Nakkalagutta Main Road">
+                        </div>
+
+                        <div class="form-group-custom">
+                            <label for="citizenComplaintText">Describe the Hazard / Transcribed Audio</label>
+                            <textarea id="citizenComplaintText" class="form-control-custom" rows="3" placeholder="Speak into the mic above or type here..."></textarea>
+                        </div>
+
+                        <!-- Photo Evidence Dropzone -->
+                        <div class="form-group-custom">
+                            <label>Civil Damage Photo (Pothole, Broken Pipe, Fallen Wire)</label>
+                            <div style="border:2px dashed #CBD5E1; border-radius:8px; padding:18px; text-align:center; background:#F8FAFC; cursor:pointer;" id="citizenPhotoDropzone">
+                                <input type="file" id="citizenFileInput" accept="image/*" style="display:none;">
+                                <div style="font-size:1.8rem; margin-bottom:4px;">📸</div>
+                                <strong id="dropzoneLabelText" style="font-size:0.85rem; color:#1E293B;">Click to Attach Real-Time Photo</strong>
+                                <p style="font-size:0.75rem; color:#64748B; margin:2px 0 0 0;">Gemini Multimodal Vision will verify depth &amp; structural safety score</p>
+                                <img id="citizenPreviewImg" style="max-height:140px; margin:12px auto 0 auto; border-radius:8px; display:none;" alt="Uploaded Preview">
+                            </div>
+                        </div>
+
+                        <button id="citizenSubmitBtn" type="submit" class="btn-primary-blue" style="width:100%; padding:14px; font-size:0.95rem; justify-content:center; margin-top:10px;">
+                            <span>Submit Grievance to District Collectorate &rarr;</span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Citizen's Recent Submissions Tracker -->
+                <div class="content-card">
+                    <div class="content-card-header">
+                        <h3>📋 Track Active Tickets in This Area</h3>
+                    </div>
+                    <div id="citizenMyTicketsFeed">
+                        <!-- Populated dynamically via JS -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================== -->
+        <!-- TAB 3: FIELD ENGINEER RESOLUTION DESK (RBAC)  -->
+        <!-- ============================================== -->
+        <section id="tab-engineer" class="view-section">
+            <div class="content-card">
+                <div class="content-card-header">
+                    <h3>
+                        <span>🛠️ Municipal Field Engineering Execution Queue</span>
+                        <span class="sub-badge" style="background:#FEF3C7; color:#B45309;">Contractor Desk</span>
+                    </h3>
+                    <span style="font-size:0.75rem; color:#64748B;">Upload After-Repair Photos to Resolve Sanctioned Work Orders</span>
+                </div>
+
+                <div class="report-feed" id="engineerFeedContainer">
+                    <!-- Populated dynamically via JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================== -->
+        <!-- TAB 4: PUBLIC TRANSPARENCY LEDGER (PROOF)      -->
+        <!-- ============================================== -->
+        <section id="tab-transparency" class="view-section">
+            <div class="content-card">
+                <div class="content-card-header">
+                    <h3>
+                        <span>📜 Public Transparency &amp; Completed Works Ledger</span>
+                        <span class="sub-badge" style="background:#DCFCE7; color:#15803D;">Audit Verified</span>
+                    </h3>
+                    <span style="font-size:0.75rem; color:#64748B;">Side-by-Side Before &amp; After Photo Proof with Sanctioned Budgets</span>
+                </div>
+
+                <div class="report-feed" id="transparencyLedgerGrid">
+                    <!-- Populated dynamically via JS -->
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ============================================== -->
+    <!-- MODALS                                         -->
+    <!-- ============================================== -->
+
+    <!-- 1. RBAC Login / Role Switcher Modal -->
+    <div id="roleModal" class="desk-modal">
+        <div class="modal-dialog-box">
+            <div class="modal-header-bar">
+                <h3>Select Role / Quick Demo Login</h3>
+                <button class="modal-close-btn" onclick="closeModal('roleModal')">&times;</button>
+            </div>
+            <div class="modal-body-content">
+                <p style="font-size:0.82rem; color:#64748B; margin-bottom:16px;">Test the platform under different permission levels:</p>
+                
+                <div class="role-select-grid">
+                    <div class="role-option-card active" onclick="setRole('collector')">
+                        <div class="role-option-icon">🏛️</div>
+                        <div>
+                            <strong style="color:#0F172A; font-size:0.95rem;">District Collector &amp; Magistrate (Govt Admin)</strong>
+                            <p style="font-size:0.78rem; color:#64748B; margin-top:2px;">Approve citizen hazard photos, sanction repair funds, assign contractors.</p>
+                        </div>
+                    </div>
+
+                    <div class="role-option-card" onclick="setRole('citizen')">
+                        <div class="role-option-icon">👤</div>
+                        <div>
+                            <strong style="color:#0F172A; font-size:0.95rem;">Citizen (Public Reporter)</strong>
+                            <p style="font-size:0.78rem; color:#64748B; margin-top:2px;">Snap photo, record voice in Telugu/English, track ticket status.</p>
+                        </div>
+                    </div>
+
+                    <div class="role-option-card" onclick="setRole('engineer')">
+                        <div class="role-option-icon">🛠️</div>
+                        <div>
+                            <strong style="color:#0F172A; font-size:0.95rem;">Municipal Field Engineer / Contractor</strong>
+                            <p style="font-size:0.78rem; color:#64748B; margin-top:2px;">Inspect sanctioned works, upload fixed repair photo proof, mark resolved.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Jurisdiction Switcher Modal (Telangana & Andhra Pradesh) -->
+    <div id="jurisdictionModal" class="desk-modal">
+        <div class="modal-dialog-box">
+            <div class="modal-header-bar">
+                <h3>Switch District Jurisdiction (AP &amp; TG)</h3>
+                <button class="modal-close-btn" onclick="closeModal('jurisdictionModal')">&times;</button>
+            </div>
+            <div class="modal-body-content">
+                <p style="font-size:0.82rem; color:#64748B; margin-bottom:14px;">Select any district administration across Telangana and Andhra Pradesh:</p>
+                <select id="jurisdictionSelectModal" class="form-control-custom" style="padding:12px; font-weight:700; font-size:0.95rem; margin-bottom:18px;">
+                    <!-- Populated dynamically via JS -->
+                </select>
+                <button class="btn-primary-blue" style="width:100%; padding:12px; justify-content:center;" onclick="switchJurisdiction(document.getElementById('jurisdictionSelectModal').value)">
+                    Switch Active District &rarr;
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Field Engineer Resolve Modal (Upload Proof Photo) -->
+    <div id="resolveModal" class="desk-modal">
+        <div class="modal-dialog-box">
+            <div class="modal-header-bar">
+                <h3>Submit Completion Proof &amp; Resolve</h3>
+                <button class="modal-close-btn" onclick="closeModal('resolveModal')">&times;</button>
+            </div>
+            <div class="modal-body-content">
+                <p id="resolveTicketIdLabel" style="font-size:0.85rem; font-weight:800; color:#1A73E8; margin-bottom:8px;">Ticket: VIT-WGL-8938</p>
+                <p style="font-size:0.8rem; color:#64748B; margin-bottom:16px;">Attach photo evidence of the repaired road or fixed pipeline to verify completion.</p>
+
+                <div id="engineerDropzone" style="border:2px dashed #10B981; background:#F0FDF4; border-radius:8px; padding:20px; text-align:center; cursor:pointer; margin-bottom:16px;" onclick="document.getElementById('engineerFileInput').click()">
+                    <input type="file" id="engineerFileInput" accept="image/*" style="display:none;" onchange="handleEngineerFileSelect(event)">
+                    <img id="engineerPreviewImg" style="display:none; max-height:140px; margin:0 auto 10px auto; border-radius:6px; border:2px solid #10B981;">
+                    <div style="font-size:1.8rem;" id="engineerDropIcon">📸</div>
+                    <strong style="font-size:0.85rem; color:#166534;" id="engineerDropLabel">Click to Upload "After-Repair" Photo Proof</strong>
+                    <p style="font-size:0.75rem; color:#15803D; margin:4px 0 0 0;">Will be permanently verified on the Public Transparency Ledger</p>
+                </div>
+
+                <button id="resolveSubmitBtn" class="btn-approve" style="width:100%; padding:12px; font-size:0.9rem; justify-content:center;" onclick="submitResolvedProof()">
+                    ✓ Verify &amp; Mark 100% Repaired
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. Image Zoom Lightbox Modal -->
+    <div id="imageZoomModal" class="desk-modal" onclick="closeModal('imageZoomModal')">
+        <div style="max-width:850px; width:100%; text-align:center;">
+            <img id="zoomModalImg" style="max-width:100%; max-height:85vh; border-radius:8px; box-shadow:0 20px 50px rgba(0,0,0,0.5);" alt="Zoomed Hazard Evidence">
+            <p style="color:#FFFFFF; font-size:0.8rem; margin-top:8px;">Click anywhere to close</p>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="desk-footer">
+        <div class="footer-content-inner">
+            <div>
+                <strong>Vitoniya Public Help Desk</strong> &bull; Enterprise Digital Public Infrastructure
+                <p style="font-size:0.72rem; margin-top:2px;">Architected by <a href="https://vitoniya.com" target="_blank">Vitoniya Global Technologies</a> &bull; Supporting Andhra Pradesh &amp; Telangana</p>
+            </div>
+            <div>
+                <span>Target Subdomain: <code>desk.vitoniya.com</code></span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Leaflet GIS Library -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="script.js"></script>
+</body>
+</html>
