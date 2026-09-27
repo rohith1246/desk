@@ -72,6 +72,119 @@ def serve_dataset():
     return send_from_directory(BASE_DIR, 'dataset.json')
 
 # ==========================================
+# AUTHENTICATION API ROUTES (RBAC)
+# ==========================================
+
+@app.route('/api/auth/login', methods=['POST'])
+def auth_login():
+    data = request.get_json() or {}
+    username = data.get('username', '').strip()
+    password = data.get('password', '').strip()
+
+    if not username or not password:
+        return jsonify({"success": False, "message": "Username and password are required."}), 400
+
+    try:
+        user = database.authenticate_user(username, password)
+        if user:
+            return jsonify({
+                "success": True,
+                "message": f"Welcome back, {user['full_name']}!",
+                "user": user
+            })
+        else:
+            return jsonify({"success": False, "message": "Invalid username or password. Check credentials and try again."}), 401
+    except Exception as e:
+        logger.error(f"Login error: {e}")
+        return jsonify({"success": False, "message": str(e)}), 500
+
+@app.route('/api/auth/signup', methods=['POST'])
+def auth_signup():
+    data = request.get_json() or {}
+    username = data.get('username', '').strip()
+    password = data.get('password', '').strip()
+    full_name = data.get('full_name', '').strip()
+    role = data.get('role', 'citizen').strip()
+    jurisdiction_id = data.get('jurisdiction_id', 'JUR-TG-WGL').strip()
+
+    if not username or not password or not full_name:
+        return jsonify({"success": False, "message": "Full name, username/email, and password are required."}), 400
+
+    if role not in ['collector', 'citizen', 'engineer']:
+        return jsonify({"success": False, "message": "Invalid role specified."}), 400
+
+    try:
+        new_user = database.register_new_user(username, password, full_name, role, jurisdiction_id)
+        return jsonify({
+            "success": True,
+            "message": f"Account successfully created for {full_name}!",
+            "user": new_user
+        }), 201
+    except ValueError as ve:
+        return jsonify({"success": False, "message": str(ve)}), 400
+    except Exception as e:
+        logger.error(f"Signup error: {e}")
+        return jsonify({"success": False, "message": str(e)}), 500
+
+@app.route('/api/auth/demo-users', methods=['GET'])
+def get_demo_users():
+    return jsonify({
+        "success": True,
+        "demo_accounts": [
+            {
+                "role": "collector",
+                "role_label": "District Collector & Magistrate",
+                "username": "collector_wgl",
+                "default_password": "admin123",
+                "full_name": "Dr. P. Satyanarayana, IAS",
+                "jurisdiction_id": "JUR-TG-WGL",
+                "district": "Warangal, Telangana",
+                "badge": "Govt Administrative Head"
+            },
+            {
+                "role": "collector",
+                "role_label": "Greater Hyderabad Municipal Commissioner",
+                "username": "collector_hyd",
+                "default_password": "admin123",
+                "full_name": "K. Ronald Rose, IAS",
+                "jurisdiction_id": "JUR-TG-HYD",
+                "district": "Hyderabad, Telangana",
+                "badge": "State Capital Commissioner"
+            },
+            {
+                "role": "collector",
+                "role_label": "Visakhapatnam District Collector",
+                "username": "collector_vzg",
+                "default_password": "admin123",
+                "full_name": "Dr. A. Mallikarjuna, IAS",
+                "jurisdiction_id": "JUR-AP-VZG",
+                "district": "Visakhapatnam, Andhra Pradesh",
+                "badge": "Port City Magistrate"
+            },
+            {
+                "role": "citizen",
+                "role_label": "Citizen Reporter",
+                "username": "citizen_srinivas",
+                "default_password": "citizen123",
+                "full_name": "K. Srinivasulu",
+                "jurisdiction_id": "JUR-TG-WGL",
+                "district": "Warangal, Telangana",
+                "badge": "Public Ward Reporter"
+            },
+            {
+                "role": "engineer",
+                "role_label": "Municipal Field Engineer (EE)",
+                "username": "engineer_wgl",
+                "default_password": "eng123",
+                "full_name": "Er. M. Rajendra Prasad (EE)",
+                "jurisdiction_id": "JUR-TG-WGL",
+                "district": "Warangal, Telangana",
+                "badge": "Civil Works Division"
+            }
+        ]
+    })
+
+# ==========================================
 # REAL DATABASE API ROUTES
 # ==========================================
 

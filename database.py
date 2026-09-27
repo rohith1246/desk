@@ -322,3 +322,50 @@ def delete_or_reject_ticket(ticket_id, actor_name):
     ''', (ticket_id, actor_name, 'collector', 'Rejected / Deleted Ticket', 'Marked Spurious'))
     conn.commit()
     conn.close()
+
+def authenticate_user(username_or_email, password):
+    conn, engine = get_connection()
+    cursor = conn.cursor()
+    ph = '%s' if engine == 'postgres' else '?'
+    clean_username = username_or_email.strip().lower()
+    cursor.execute(f'SELECT * FROM vdesk_users WHERE LOWER(username) = {ph}', (clean_username,))
+    user = cursor.fetchone()
+    conn.close()
+    if not user:
+        return None
+    user_dict = dict(user)
+    if check_password_hash(user_dict['password_hash'], password):
+        del user_dict['password_hash']
+        return user_dict
+    return None
+
+def register_new_user(username, password, full_name, role, jurisdiction_id):
+    conn, engine = get_connection()
+    cursor = conn.cursor()
+    ph = '%s' if engine == 'postgres' else '?'
+    clean_username = username.strip().lower()
+    cursor.execute(f'SELECT id FROM vdesk_users WHERE LOWER(username) = {ph}', (clean_username,))
+    if cursor.fetchone():
+        conn.close()
+        raise ValueError(f"Username or email '{username}' is already registered.")
+
+    hashed = generate_password_hash(password)
+    cursor.execute(f'''
+    INSERT INTO vdesk_users (username, password_hash, full_name, role, jurisdiction_id)
+    VALUES ({ph}, {ph}, {ph}, {ph}, {ph})
+    ''', (clean_username, hashed, full_name.strip(), role.strip(), jurisdiction_id.strip()))
+    conn.commit()
+
+    cursor.execute(f'SELECT id, username, full_name, role, jurisdiction_id, created_at FROM vdesk_users WHERE LOWER(username) = {ph}', (clean_username,))
+    new_user = dict(cursor.fetchone())
+    conn.close()
+    return new_user
+
+def fetch_all_users():
+    conn, engine = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT id, username, full_name, role, jurisdiction_id, created_at FROM vdesk_users ORDER BY id')
+    users = [dict(u) for u in cursor.fetchall()]
+    conn.close()
+    return users
+

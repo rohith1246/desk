@@ -1,5 +1,6 @@
 // Vitoniya Public Help Desk - Enterprise Script & RBAC Engine
 let appData = null;
+let currentUser = null;
 let currentRole = 'collector'; // 'collector' | 'citizen' | 'engineer'
 let currentJurisdiction = null;
 let leafletMap = null;
@@ -8,6 +9,7 @@ let speechRecognizer = null;
 let isRecording = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
+    initAuth();
     await loadDataset();
     initJurisdiction();
     initMap();
@@ -129,8 +131,9 @@ function initMap() {
         zoom: currentJurisdiction.zoom || 12
     });
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; CARTO &bull; Vitoniya Public Help Desk GIS'
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors &bull; Vitoniya Public Help Desk GIS'
     }).addTo(leafletMap);
 
     renderMapPins();
@@ -169,12 +172,325 @@ function renderMapPins() {
     });
 }
 
-// 4. Role-Based Access Control (RBAC)
+// 4. Authentication, User Session & RBAC Engine
+function initAuth() {
+    const savedUser = localStorage.getItem('vit_current_user');
+    if (savedUser) {
+        try {
+            currentUser = JSON.parse(savedUser);
+            currentRole = currentUser.role || 'collector';
+        } catch (e) {
+            currentUser = null;
+        }
+    } else {
+        // Default demo session for instant rich platform review
+        currentUser = {
+            id: 1,
+            username: "collector_wgl",
+            full_name: "Dr. P. Satyanarayana, IAS",
+            role: "collector",
+            jurisdiction_id: "JUR-TG-WGL"
+        };
+        localStorage.setItem('vit_current_user', JSON.stringify(currentUser));
+        currentRole = 'collector';
+    }
+    renderUserAuthUI();
+    loadDemoUsersList();
+}
+
+function renderUserAuthUI() {
+    const container = document.getElementById('navUserSection');
+    if (!container) return;
+
+    if (currentUser) {
+        const initials = currentUser.full_name
+            .split(' ')
+            .filter(w => w.length > 0)
+            .map(w => w[0].toUpperCase())
+            .slice(0, 2)
+            .join('') || 'U';
+
+        let roleLabel = 'District Collector';
+        let roleClass = 'collector';
+        if (currentUser.role === 'citizen') {
+            roleLabel = 'Citizen Reporter';
+            roleClass = 'citizen';
+        } else if (currentUser.role === 'engineer') {
+            roleLabel = 'Field Engineer';
+            roleClass = 'engineer';
+        }
+
+        container.innerHTML = `
+            <span class="role-badge ${roleClass}" style="cursor:pointer;" onclick="openAuthModal('demo')" title="Active Access Level">
+                ${currentUser.role === 'collector' ? '🛡️' : currentUser.role === 'citizen' ? '👤' : '🛠️'} ${roleLabel}
+            </span>
+            <div class="user-badge-nav" onclick="openAuthModal('demo')" style="cursor:pointer;" title="Logged in as ${currentUser.full_name} (${currentUser.username})">
+                <div class="user-avatar-circle">${initials}</div>
+                <div style="line-height:1.2;">
+                    <strong style="font-size:0.8rem; color:#0F172A; display:block;">${currentUser.full_name}</strong>
+                    <span style="font-size:0.68rem; color:#64748B;">@${currentUser.username}</span>
+                </div>
+            </div>
+            <button class="btn-auth-outline" onclick="openAuthModal('demo')" title="Switch User / Demo" style="padding:6px 10px;">
+                🔄 Switch
+            </button>
+            <button class="btn-auth-outline" onclick="handleUserLogout()" title="Sign Out" style="padding:6px 10px; color:#EF4444; border-color:#FECACA;">
+                🚪 Logout
+            </button>
+        `;
+    } else {
+        container.innerHTML = `
+            <button class="btn-auth-outline" onclick="openAuthModal('signin')">
+                🔑 Sign In
+            </button>
+            <button class="btn-primary-blue" style="padding:6px 14px; font-size:0.82rem;" onclick="openAuthModal('signup')">
+                📝 Create Account
+            </button>
+        `;
+    }
+}
+
+function openAuthModal(tab = 'signin') {
+    switchAuthTab(tab);
+    openModal('authModal');
+}
+
+function switchAuthTab(tabName) {
+    document.querySelectorAll('.auth-tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.auth-tab-panel').forEach(p => p.classList.remove('active'));
+
+    if (tabName === 'signin') {
+        const btn = document.getElementById('tabBtnSignIn');
+        if (btn) btn.classList.add('active');
+        const p = document.getElementById('authPanelSignIn');
+        if (p) p.classList.add('active');
+    } else if (tabName === 'signup') {
+        const btn = document.getElementById('tabBtnSignUp');
+        if (btn) btn.classList.add('active');
+        const p = document.getElementById('authPanelSignUp');
+        if (p) p.classList.add('active');
+    } else if (tabName === 'demo') {
+        const btn = document.getElementById('tabBtnDemo');
+        if (btn) btn.classList.add('active');
+        const p = document.getElementById('authPanelDemo');
+        if (p) p.classList.add('active');
+        loadDemoUsersList();
+    }
+}
+
+async function loadDemoUsersList() {
+    const container = document.getElementById('authDemoCardsContainer');
+    if (!container) return;
+
+    try {
+        const res = await fetch('/api/auth/demo-users');
+        if (res.ok) {
+            const data = await res.json();
+            if (data.demo_accounts) {
+                container.innerHTML = '';
+                data.demo_accounts.forEach(acc => {
+                    const card = document.createElement('div');
+                    card.className = 'auth-demo-card';
+                    card.onclick = () => loginWithDemoAccount(acc);
+                    card.innerHTML = `
+                        <div class="auth-demo-info">
+                            <div class="auth-demo-icon">
+                                ${acc.role === 'collector' ? '🏛️' : acc.role === 'citizen' ? '👤' : '🛠️'}
+                            </div>
+                            <div>
+                                <div style="display:flex; align-items:center; gap:6px;">
+                                    <strong style="font-size:0.88rem; color:#0F172A;">${acc.full_name}</strong>
+                                    <span class="auth-demo-role-pill ${acc.role}">${acc.role}</span>
+                                </div>
+                                <span style="font-size:0.75rem; color:#64748B;">📍 ${acc.district} &bull; <code>${acc.username}</code></span>
+                            </div>
+                        </div>
+                        <button class="btn-primary-blue" style="padding:6px 12px; font-size:0.75rem; pointer-events:none;">
+                            Log In &rarr;
+                        </button>
+                    `;
+                    container.appendChild(card);
+                });
+                return;
+            }
+        }
+    } catch (e) {
+        console.warn('Failed to fetch demo users:', e);
+    }
+}
+
+async function loginWithDemoAccount(acc) {
+    currentUser = {
+        username: acc.username,
+        full_name: acc.full_name,
+        role: acc.role,
+        jurisdiction_id: acc.jurisdiction_id
+    };
+    currentRole = acc.role;
+    localStorage.setItem('vit_current_user', JSON.stringify(currentUser));
+    localStorage.setItem('vit_user_role', acc.role);
+
+    // Switch to user's assigned jurisdiction if different
+    if (acc.jurisdiction_id && (!currentJurisdiction || currentJurisdiction.id !== acc.jurisdiction_id)) {
+        await switchJurisdiction(acc.jurisdiction_id);
+    }
+
+    renderUserAuthUI();
+    updateRBACUI();
+    closeModal('authModal');
+    showToast(`✓ Logged in as ${acc.full_name} (${getRoleTitle(acc.role)})`);
+}
+
+async function handleAuthSignIn(e) {
+    e.preventDefault();
+    const username = document.getElementById('signinUsername').value.trim();
+    const password = document.getElementById('signinPassword').value.trim();
+    const submitBtn = document.getElementById('btnSignInSubmit');
+
+    if (!username || !password) {
+        alert('Please enter both username/email and password.');
+        return;
+    }
+
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `<span>⏳</span> Verifying credentials...`;
+    }
+
+    try {
+        const res = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+            currentUser = data.user;
+            currentRole = data.user.role;
+            localStorage.setItem('vit_current_user', JSON.stringify(currentUser));
+            localStorage.setItem('vit_user_role', currentRole);
+
+            if (data.user.jurisdiction_id && (!currentJurisdiction || currentJurisdiction.id !== data.user.jurisdiction_id)) {
+                await switchJurisdiction(data.user.jurisdiction_id);
+            }
+
+            renderUserAuthUI();
+            updateRBACUI();
+            closeModal('authModal');
+            showToast(`✓ Welcome back, ${data.user.full_name}!`);
+        } else {
+            alert(data.message || 'Invalid username or password.');
+        }
+    } catch (err) {
+        console.error('Login error:', err);
+        alert('Authentication server temporarily offline. You can also use the 1-Click Demo accounts!');
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = `<span>Sign In to Portal &rarr;</span>`;
+        }
+    }
+}
+
+async function handleAuthSignUp(e) {
+    e.preventDefault();
+    const role = document.getElementById('signupRole').value;
+    const fullName = document.getElementById('signupFullName').value.trim();
+    const username = document.getElementById('signupUsername').value.trim();
+    const jurisdictionId = document.getElementById('signupJurisdiction').value;
+    const password = document.getElementById('signupPassword').value.trim();
+    const submitBtn = document.getElementById('btnSignUpSubmit');
+
+    if (!fullName || !username || !password) {
+        alert('Please fill out all required fields.');
+        return;
+    }
+
+    if (password.length < 6) {
+        alert('Password must be at least 6 characters long.');
+        return;
+    }
+
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `<span>⏳</span> Creating account in PostgreSQL...`;
+    }
+
+    try {
+        const res = await fetch('/api/auth/signup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                role,
+                full_name: fullName,
+                username,
+                jurisdiction_id: jurisdictionId,
+                password
+            })
+        });
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+            currentUser = data.user;
+            currentRole = data.user.role;
+            localStorage.setItem('vit_current_user', JSON.stringify(currentUser));
+            localStorage.setItem('vit_user_role', currentRole);
+
+            if (jurisdictionId && (!currentJurisdiction || currentJurisdiction.id !== jurisdictionId)) {
+                await switchJurisdiction(jurisdictionId);
+            }
+
+            renderUserAuthUI();
+            updateRBACUI();
+            closeModal('authModal');
+            showToast(`✓ Account created! Welcome, ${data.user.full_name}`);
+        } else {
+            alert(data.message || 'Registration failed. Please try a different username.');
+        }
+    } catch (err) {
+        console.error('Signup error:', err);
+        alert('Registration error. Please check your network connection.');
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = `<span>Register &amp; Enter Portal &rarr;</span>`;
+        }
+    }
+}
+
+function handleUserLogout() {
+    currentUser = null;
+    localStorage.removeItem('vit_current_user');
+    currentRole = 'citizen';
+    renderUserAuthUI();
+    updateRBACUI();
+    showToast('Logged out successfully. Switched to Public Transparency Ledger.');
+    switchTab('tab-transparency');
+}
+
+function togglePasswordVisibility(inputId, btn) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    if (input.type === 'password') {
+        input.type = 'text';
+        btn.innerText = '🙈';
+    } else {
+        input.type = 'password';
+        btn.innerText = '👁️';
+    }
+}
+
 function setRole(role) {
     currentRole = role;
     localStorage.setItem('vit_user_role', role);
+    if (currentUser) {
+        currentUser.role = role;
+        localStorage.setItem('vit_current_user', JSON.stringify(currentUser));
+    }
+    renderUserAuthUI();
     updateRBACUI();
-    closeModal('roleModal');
+    closeModal('authModal');
     showToast(`Active Session Role: ${getRoleTitle(role)}`);
 }
 
@@ -186,21 +502,14 @@ function getRoleTitle(role) {
 }
 
 function updateRBACUI() {
-    const rolePill = document.getElementById('activeRolePill');
-    rolePill.className = `role-badge ${currentRole}`;
-
     if (currentRole === 'collector') {
-        rolePill.innerHTML = `🛡️ Collector / Magistrate Desk`;
         switchTab('tab-collector');
     } else if (currentRole === 'citizen') {
-        rolePill.innerHTML = `👤 Citizen Portal`;
         switchTab('tab-citizen');
     } else if (currentRole === 'engineer') {
-        rolePill.innerHTML = `🛠️ Field Engineer Desk`;
         switchTab('tab-engineer');
     }
 
-    // Toggle button visibility inside tickets
     renderAllViews();
 }
 

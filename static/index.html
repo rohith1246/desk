@@ -48,15 +48,10 @@
                     🏛️ Warangal, Telangana
                 </button>
 
-                <!-- Active RBAC Role Badge -->
-                <span class="role-badge collector" id="activeRolePill" onclick="openModal('roleModal')" style="cursor:pointer;" title="Click to Switch Demo Role">
-                    🛡️ Collector / Magistrate Desk
-                </span>
-
-                <!-- Switch Role / Login Button -->
-                <button class="btn-primary-blue" onclick="openModal('roleModal')">
-                    <span>Switch Role / Login &rarr;</span>
-                </button>
+                <!-- User Session Area (Dynamically rendered via JS) -->
+                <div id="navUserSection" style="display:flex; align-items:center; gap:8px;">
+                    <!-- Rendered by renderUserAuthUI() -->
+                </div>
             </div>
         </div>
     </header>
@@ -284,41 +279,110 @@
     <!-- MODALS                                         -->
     <!-- ============================================== -->
 
-    <!-- 1. RBAC Login / Role Switcher Modal -->
-    <div id="roleModal" class="desk-modal">
-        <div class="modal-dialog-box">
+    <!-- 1. Real Authentication Portal Modal (Login, Signup, Demo RBAC) -->
+    <div id="authModal" class="desk-modal">
+        <div class="modal-dialog-box" style="max-width:540px;">
             <div class="modal-header-bar">
-                <h3>Select Role / Quick Demo Login</h3>
-                <button class="modal-close-btn" onclick="closeModal('roleModal')">&times;</button>
+                <div>
+                    <h3 id="authModalTitle">Vitoniya Help Desk &bull; Portal Access</h3>
+                    <p style="font-size:0.75rem; color:#64748B; margin-top:2px;">Government Administrative &amp; Citizen Identity Gateway</p>
+                </div>
+                <button class="modal-close-btn" onclick="closeModal('authModal')">&times;</button>
             </div>
             <div class="modal-body-content">
-                <p style="font-size:0.82rem; color:#64748B; margin-bottom:16px;">Test the platform under different permission levels:</p>
-                
-                <div class="role-select-grid">
-                    <div class="role-option-card active" onclick="setRole('collector')">
-                        <div class="role-option-icon">🏛️</div>
-                        <div>
-                            <strong style="color:#0F172A; font-size:0.95rem;">District Collector &amp; Magistrate (Govt Admin)</strong>
-                            <p style="font-size:0.78rem; color:#64748B; margin-top:2px;">Approve citizen hazard photos, sanction repair funds, assign contractors.</p>
-                        </div>
-                    </div>
+                <!-- Auth Tabs: Sign In / Create Account / 1-Click Demo -->
+                <div class="auth-tabs-nav">
+                    <button class="auth-tab-btn active" id="tabBtnSignIn" onclick="switchAuthTab('signin')">🔑 Sign In</button>
+                    <button class="auth-tab-btn" id="tabBtnSignUp" onclick="switchAuthTab('signup')">📝 Create Account</button>
+                    <button class="auth-tab-btn" id="tabBtnDemo" onclick="switchAuthTab('demo')">⚡ 1-Click Demo</button>
+                </div>
 
-                    <div class="role-option-card" onclick="setRole('citizen')">
-                        <div class="role-option-icon">👤</div>
-                        <div>
-                            <strong style="color:#0F172A; font-size:0.95rem;">Citizen (Public Reporter)</strong>
-                            <p style="font-size:0.78rem; color:#64748B; margin-top:2px;">Snap photo, record voice in Telugu/English, track ticket status.</p>
+                <!-- TAB 1: SIGN IN -->
+                <div id="authPanelSignIn" class="auth-tab-panel active">
+                    <form onsubmit="handleAuthSignIn(event)">
+                        <div class="form-group-custom">
+                            <label for="signinUsername">Username or Registered Email</label>
+                            <input type="text" id="signinUsername" class="form-control-custom" placeholder="e.g. collector_wgl or citizen_srinivas" required>
                         </div>
-                    </div>
+                        <div class="form-group-custom">
+                            <label for="signinPassword">Password</label>
+                            <div class="auth-input-wrapper">
+                                <input type="password" id="signinPassword" class="form-control-custom" placeholder="Enter your password" required>
+                                <button type="button" class="auth-eye-btn" onclick="togglePasswordVisibility('signinPassword', this)">👁️</button>
+                            </div>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin:12px 0 18px 0; font-size:0.78rem;">
+                            <label style="display:flex; align-items:center; gap:6px; cursor:pointer; color:#475569;">
+                                <input type="checkbox" id="rememberMeCheckbox" checked> Remember session
+                            </label>
+                            <a href="javascript:void(0)" onclick="switchAuthTab('demo')" style="color:#1A73E8; text-decoration:none; font-weight:700;">Forgot / Need Demo Account?</a>
+                        </div>
+                        <button type="submit" id="btnSignInSubmit" class="btn-primary-blue" style="width:100%; padding:12px; font-size:0.95rem; justify-content:center;">
+                            <span>Sign In to Portal &rarr;</span>
+                        </button>
+                        <div style="text-align:center; margin-top:14px; font-size:0.8rem; color:#64748B;">
+                            New to Vitoniya Desk? <a href="javascript:void(0)" onclick="switchAuthTab('signup')" style="color:#1A73E8; font-weight:700; text-decoration:none;">Create New Account</a>
+                        </div>
+                    </form>
+                </div>
 
-                    <div class="role-option-card" onclick="setRole('engineer')">
-                        <div class="role-option-icon">🛠️</div>
-                        <div>
-                            <strong style="color:#0F172A; font-size:0.95rem;">Municipal Field Engineer / Contractor</strong>
-                            <p style="font-size:0.78rem; color:#64748B; margin-top:2px;">Inspect sanctioned works, upload fixed repair photo proof, mark resolved.</p>
+                <!-- TAB 2: CREATE ACCOUNT (SIGN UP) -->
+                <div id="authPanelSignUp" class="auth-tab-panel">
+                    <form onsubmit="handleAuthSignUp(event)">
+                        <div class="form-group-custom">
+                            <label>Select User Role / Access Level</label>
+                            <select id="signupRole" class="form-control-custom" style="font-weight:700;">
+                                <option value="citizen">👤 Citizen (Public Reporter)</option>
+                                <option value="collector">🏛️ District Collector &amp; Magistrate (Govt Admin)</option>
+                                <option value="engineer">🛠️ Municipal Field Engineer / Contractor</option>
+                            </select>
                         </div>
+                        <div class="form-group-custom">
+                            <label for="signupFullName">Full Legal Name</label>
+                            <input type="text" id="signupFullName" class="form-control-custom" placeholder="e.g. K. Srinivasulu or Dr. P. Satyanarayana, IAS" required>
+                        </div>
+                        <div class="form-group-custom">
+                            <label for="signupUsername">Username or Email</label>
+                            <input type="text" id="signupUsername" class="form-control-custom" placeholder="e.g. srinivas_wgl or collector.office@gov.in" required>
+                        </div>
+                        <div class="form-group-custom">
+                            <label for="signupJurisdiction">Assigned District Jurisdiction</label>
+                            <select id="signupJurisdiction" class="form-control-custom" style="font-weight:700;">
+                                <option value="JUR-TG-WGL">Warangal, Telangana (GWMC)</option>
+                                <option value="JUR-TG-HYD">Hyderabad, Telangana (GHMC)</option>
+                                <option value="JUR-TG-KRM">Karimnagar, Telangana (MCK)</option>
+                                <option value="JUR-AP-VZG">Visakhapatnam, Andhra Pradesh (GVMC)</option>
+                                <option value="JUR-AP-VJA">Vijayawada, Andhra Pradesh (VMC)</option>
+                                <option value="JUR-AP-GNT">Guntur &amp; Amaravati, Andhra Pradesh (AP CRDA)</option>
+                                <option value="JUR-AP-TPT">Tirupati, Andhra Pradesh (MCT)</option>
+                            </select>
+                        </div>
+                        <div class="form-group-custom">
+                            <label for="signupPassword">Create Password</label>
+                            <div class="auth-input-wrapper">
+                                <input type="password" id="signupPassword" class="form-control-custom" placeholder="Minimum 6 characters" minlength="6" required>
+                                <button type="button" class="auth-eye-btn" onclick="togglePasswordVisibility('signupPassword', this)">👁️</button>
+                            </div>
+                        </div>
+                        <button type="submit" id="btnSignUpSubmit" class="btn-primary-blue" style="width:100%; padding:12px; font-size:0.95rem; justify-content:center; margin-top:8px;">
+                            <span>Register &amp; Enter Portal &rarr;</span>
+                        </button>
+                        <div style="text-align:center; margin-top:14px; font-size:0.8rem; color:#64748B;">
+                            Already registered? <a href="javascript:void(0)" onclick="switchAuthTab('signin')" style="color:#1A73E8; font-weight:700; text-decoration:none;">Sign In here</a>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- TAB 3: 1-CLICK QUICK DEMO LOGIN -->
+                <div id="authPanelDemo" class="auth-tab-panel">
+                    <p style="font-size:0.8rem; color:#64748B; margin-bottom:14px;">
+                        Click any pre-configured verified account to instantly log in and experience that role's permissions:
+                    </p>
+                    <div id="authDemoCardsContainer">
+                        <!-- Populated dynamically via JS from /api/auth/demo-users -->
                     </div>
                 </div>
+
             </div>
         </div>
     </div>
